@@ -1,0 +1,7 @@
+{
+  "/prijava/page": "app/prijava/page.js",
+  "/registracija/page": "app/registracija/page.js",
+  "/majstori/page": "app/majstori/page.js",
+  "/profil/page": "app/profil/page.js",
+  "/page": "app/page.js"
+}

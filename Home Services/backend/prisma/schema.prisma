@@ -1,0 +1,178 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              Int              @id @default(autoincrement())
+  username        String           @unique
+  email           String           @unique
+  password        String
+  name            String
+  phone           String
+  role            UserRole
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  admin           Admin?
+  customer        Customer?
+  sentMessages    Message[]
+  serviceProvider ServiceProvider?
+
+  @@map("users")
+}
+
+model Customer {
+  id            Int            @id @default(autoincrement())
+  userId        Int            @unique
+  address       String?
+  city          String?
+  conversations Conversation[]
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviews       Review[]
+
+  @@map("customers")
+}
+
+model ServiceProvider {
+  id            Int                       @id @default(autoincrement())
+  userId        Int                       @unique
+  bio           String?
+  experience    Int                       @default(0)
+  rating        Float                     @default(0)
+  totalReviews  Int                       @default(0)
+  isVerified    Boolean                   @default(false)
+  conversations Conversation[]
+  coverageAreas CoverageArea[]
+  portfolio     PortfolioItem[]
+  reviews       Review[]
+  categories    ServiceProviderCategory[]
+  user          User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("service_providers")
+}
+
+model Admin {
+  id          Int    @id @default(autoincrement())
+  userId      Int    @unique
+  permissions String
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("admins")
+}
+
+model Category {
+  id               Int                       @id @default(autoincrement())
+  name             String                    @unique
+  description      String
+  icon             String?
+  isActive         Boolean                   @default(true)
+  serviceProviders ServiceProviderCategory[]
+  services         Service[]
+
+  @@map("categories")
+}
+
+model Service {
+  id          Int      @id @default(autoincrement())
+  categoryId  Int
+  name        String
+  description String
+  isActive    Boolean  @default(true)
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([categoryId], map: "services_categoryId_fkey")
+  @@map("services")
+}
+
+model ServiceProviderCategory {
+  id                Int             @id @default(autoincrement())
+  serviceProviderId Int
+  categoryId        Int
+  category          Category        @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  serviceProvider   ServiceProvider @relation(fields: [serviceProviderId], references: [id], onDelete: Cascade)
+
+  @@unique([serviceProviderId, categoryId])
+  @@index([categoryId], map: "service_provider_categories_categoryId_fkey")
+  @@map("service_provider_categories")
+}
+
+model CoverageArea {
+  id                Int             @id @default(autoincrement())
+  serviceProviderId Int
+  city              String
+  serviceProvider   ServiceProvider @relation(fields: [serviceProviderId], references: [id], onDelete: Cascade)
+
+  @@index([serviceProviderId], map: "coverage_areas_serviceProviderId_fkey")
+  @@map("coverage_areas")
+}
+
+model PortfolioItem {
+  id                Int             @id @default(autoincrement())
+  serviceProviderId Int
+  title             String
+  description       String
+  imageUrl          String
+  categoryId        Int?
+  createdAt         DateTime        @default(now())
+  serviceProvider   ServiceProvider @relation(fields: [serviceProviderId], references: [id], onDelete: Cascade)
+
+  @@index([serviceProviderId], map: "portfolio_items_serviceProviderId_fkey")
+  @@map("portfolio_items")
+}
+
+model Review {
+  id                Int             @id @default(autoincrement())
+  customerId        Int
+  serviceProviderId Int
+  rating            Int
+  comment           String?
+  createdAt         DateTime        @default(now())
+  customer          Customer        @relation(fields: [customerId], references: [id])
+  serviceProvider   ServiceProvider @relation(fields: [serviceProviderId], references: [id])
+
+  @@index([customerId], map: "reviews_customerId_fkey")
+  @@index([serviceProviderId], map: "reviews_serviceProviderId_fkey")
+  @@map("reviews")
+}
+
+model Conversation {
+  id            Int             @id @default(autoincrement())
+  customerId    Int
+  providerId    Int
+  lastMessage   String?
+  lastMessageAt DateTime        @default(now())
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  customer      Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  provider      ServiceProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  messages      Message[]
+
+  @@unique([customerId, providerId])
+  @@index([providerId], map: "conversations_providerId_fkey")
+  @@map("conversations")
+}
+
+model Message {
+  id             Int          @id @default(autoincrement())
+  conversationId Int
+  senderId       Int
+  content        String
+  isRead         Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId], map: "messages_conversationId_fkey")
+  @@index([senderId], map: "messages_senderId_fkey")
+  @@map("messages")
+}
+
+enum UserRole {
+  CUSTOMER
+  SERVICE_PROVIDER
+  ADMIN
+}
